@@ -1,0 +1,87 @@
+import Link from "next/link";
+import { Plus, Car } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { getVehiclePhotoUrl } from "@/lib/vehicles";
+import { sortByUrgency } from "@/lib/reminders";
+import { Button } from "@/components/ui/button";
+import { VehicleCard } from "@/components/vehicles/vehicle-card";
+import type { ReminderItem } from "@/types/supabase";
+
+export default async function DashboardPage() {
+  const supabase = await createClient();
+  const { data: vehicles } = await supabase
+    .from("vehicles")
+    .select("*")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  const vehicleIds = (vehicles ?? []).map((v) => v.id);
+  const { data: allReminders } = vehicleIds.length
+    ? await supabase.from("reminder_items").select("*").in("vehicle_id", vehicleIds)
+    : { data: [] as ReminderItem[] };
+
+  const remindersByVehicle = new Map<string, ReminderItem[]>();
+  for (const reminder of allReminders ?? []) {
+    const list = remindersByVehicle.get(reminder.vehicle_id) ?? [];
+    list.push(reminder);
+    remindersByVehicle.set(reminder.vehicle_id, list);
+  }
+
+  const vehiclesWithExtras = await Promise.all(
+    (vehicles ?? []).map(async (vehicle) => ({
+      vehicle,
+      photoUrl: await getVehiclePhotoUrl(supabase, vehicle.photo_path),
+      reminders: sortByUrgency(remindersByVehicle.get(vehicle.id) ?? []),
+    }))
+  );
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Your garage</h1>
+          <p className="text-muted-foreground">
+            {vehiclesWithExtras.length === 0
+              ? "No vehicles yet."
+              : `${vehiclesWithExtras.length} vehicle${vehiclesWithExtras.length === 1 ? "" : "s"}`}
+          </p>
+        </div>
+        <Button asChild>
+          <Link href="/vehicles/new">
+            <Plus className="size-4" />
+            Add vehicle
+          </Link>
+        </Button>
+      </div>
+
+      {vehiclesWithExtras.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed py-24 text-center">
+          <Car className="size-10 text-muted-foreground" />
+          <div>
+            <p className="font-medium">Add your first vehicle</p>
+            <p className="text-sm text-muted-foreground">
+              Track service, renewals, and costs in one place.
+            </p>
+          </div>
+          <Button asChild>
+            <Link href="/vehicles/new">
+              <Plus className="size-4" />
+              Add vehicle
+            </Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {vehiclesWithExtras.map(({ vehicle, photoUrl, reminders }) => (
+            <VehicleCard
+              key={vehicle.id}
+              vehicle={vehicle}
+              photoUrl={photoUrl}
+              reminders={reminders}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
