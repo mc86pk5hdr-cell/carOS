@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Car, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -10,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VehicleActionsMenu } from "@/components/vehicles/vehicle-actions-menu";
 import { ReminderRow } from "@/components/reminders/reminder-row";
 import { ReminderFormDialog } from "@/components/reminders/reminder-form-dialog";
+import { MaintenanceRow } from "@/components/maintenance/maintenance-row";
 import { FUEL_TYPE_OPTIONS } from "@/lib/constants";
 
 export default async function VehicleDetailPage({
@@ -23,9 +25,14 @@ export default async function VehicleDetailPage({
 
   if (!vehicle) notFound();
 
-  const [photoUrl, { data: reminders }] = await Promise.all([
+  const [photoUrl, { data: reminders }, { data: maintenanceRecords }] = await Promise.all([
     getVehiclePhotoUrl(supabase, vehicle.photo_path),
     supabase.from("reminder_items").select("*").eq("vehicle_id", vehicle.id),
+    supabase
+      .from("maintenance_records")
+      .select("*")
+      .eq("vehicle_id", vehicle.id)
+      .order("date", { ascending: false }),
   ]);
   const sortedReminders = sortByUrgency(reminders ?? []);
   const fuelLabel = FUEL_TYPE_OPTIONS.find((f) => f.value === vehicle.fuel_type)?.label;
@@ -117,6 +124,31 @@ export default async function VehicleDetailPage({
             <div className="flex flex-col">
               {sortedReminders.map((item) => (
                 <ReminderRow key={item.id} vehicleId={vehicle.id} item={item} />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Maintenance Log</CardTitle>
+          <Button size="sm" variant="outline" asChild>
+            <Link href={`/vehicles/${vehicle.id}/maintenance/new`}>
+              <Plus className="size-4" />
+              Add record
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {!maintenanceRecords || maintenanceRecords.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No maintenance records yet. Log a service manually, or scan a receipt.
+            </p>
+          ) : (
+            <div className="flex flex-col">
+              {maintenanceRecords.map((record) => (
+                <MaintenanceRow key={record.id} vehicleId={vehicle.id} record={record} />
               ))}
             </div>
           )}

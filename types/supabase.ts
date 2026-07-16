@@ -19,6 +19,9 @@ export type ReminderItemType =
   | "tyres"
   | "custom";
 
+export type MaintenanceCategory = ReminderItemType;
+export type AttachmentFileType = "image" | "pdf";
+
 export interface Database {
   public: {
     Tables: {
@@ -160,6 +163,93 @@ export interface Database {
         };
         Relationships: [];
       };
+      maintenance_records: {
+        Row: {
+          id: string;
+          vehicle_id: string;
+          user_id: string;
+          date: string;
+          workshop_name: string | null;
+          invoice_number: string | null;
+          mileage: number | null;
+          cost: number | null;
+          currency: string;
+          category: MaintenanceCategory;
+          notes: string | null;
+          parts_replaced: string | null;
+          labour_cost: number | null;
+          next_recommended_service_date: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          vehicle_id: string;
+          user_id: string;
+          date: string;
+          workshop_name?: string | null;
+          invoice_number?: string | null;
+          mileage?: number | null;
+          cost?: number | null;
+          currency?: string;
+          category: MaintenanceCategory;
+          notes?: string | null;
+          parts_replaced?: string | null;
+          labour_cost?: number | null;
+          next_recommended_service_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          vehicle_id?: string;
+          user_id?: string;
+          date?: string;
+          workshop_name?: string | null;
+          invoice_number?: string | null;
+          mileage?: number | null;
+          cost?: number | null;
+          currency?: string;
+          category?: MaintenanceCategory;
+          notes?: string | null;
+          parts_replaced?: string | null;
+          labour_cost?: number | null;
+          next_recommended_service_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      maintenance_attachments: {
+        Row: {
+          id: string;
+          maintenance_record_id: string;
+          user_id: string;
+          file_path: string;
+          file_type: AttachmentFileType;
+          file_name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          maintenance_record_id: string;
+          user_id: string;
+          file_path: string;
+          file_type: AttachmentFileType;
+          file_name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          maintenance_record_id?: string;
+          user_id?: string;
+          file_path?: string;
+          file_type?: AttachmentFileType;
+          file_name?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
@@ -171,3 +261,5 @@ export interface Database {
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 export type ReminderItem = Database["public"]["Tables"]["reminder_items"]["Row"];
+export type MaintenanceRecord = Database["public"]["Tables"]["maintenance_records"]["Row"];
+export type MaintenanceAttachment = Database["public"]["Tables"]["maintenance_attachments"]["Row"];
