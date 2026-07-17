@@ -9,7 +9,7 @@ const VehicleDetectionSchema = z.object({
   model: z.string().nullable(),
   year: z.number().nullable(),
   color: z.string().nullable(),
-  regNumber: z.string().nullable(),
+  licensePlate: z.string().nullable(),
 });
 
 export type VehicleDetection = z.infer<typeof VehicleDetectionSchema>;
@@ -38,7 +38,7 @@ export async function detectVehicleFromPhoto(
           },
           {
             type: "text",
-            text: "Identify this vehicle's make, model, approximate model year, exterior colour, and licence/registration plate if legible. Return null for anything you can't determine confidently — don't guess.",
+            text: "Identify this vehicle's make, model, approximate model year, exterior colour, and license plate if legible. Return null for anything you can't determine confidently — don't guess.",
           },
         ],
       },

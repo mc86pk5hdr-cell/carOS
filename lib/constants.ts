@@ -8,6 +8,11 @@ export const FUEL_TYPE_OPTIONS = [
   { value: "other", label: "Other" },
 ] as const;
 
+export const TRANSMISSION_OPTIONS = [
+  { value: "automatic", label: "Automatic" },
+  { value: "manual", label: "Manual" },
+] as const;
+
 export const MILEAGE_UNIT_OPTIONS = [
   { value: "km", label: "km" },
   { value: "mi", label: "mi" },

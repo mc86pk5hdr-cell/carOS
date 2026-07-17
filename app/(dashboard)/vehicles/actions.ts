@@ -9,15 +9,15 @@ import type { FormState } from "@/lib/validations/auth";
 
 function parseVehicleForm(formData: FormData) {
   return VehicleSchema.safeParse({
-    nickname: formData.get("nickname") || undefined,
+    name: formData.get("name") || undefined,
     make: formData.get("make"),
     model: formData.get("model"),
     year: formData.get("year") || undefined,
-    regNumber: formData.get("regNumber"),
-    vin: formData.get("vin") || undefined,
+    licensePlate: formData.get("licensePlate"),
     engineNumber: formData.get("engineNumber") || undefined,
     chassisNumber: formData.get("chassisNumber") || undefined,
     fuelType: formData.get("fuelType") || undefined,
+    transmission: formData.get("transmission") || undefined,
     mileage: formData.get("mileage") || undefined,
     mileageUnit: formData.get("mileageUnit") || "km",
     color: formData.get("color") || undefined,
@@ -40,15 +40,15 @@ export async function createVehicle(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { nickname, regNumber, engineNumber, chassisNumber, fuelType, mileageUnit, purchaseDate, ...rest } =
+  const { name, licensePlate, engineNumber, chassisNumber, fuelType, mileageUnit, purchaseDate, ...rest } =
     validated.data;
 
   const { data: vehicle, error } = await supabase
     .from("vehicles")
     .insert({
       user_id: user.id,
-      nickname: nickname || null,
-      reg_number: regNumber,
+      name: name || null,
+      license_plate: licensePlate,
       engine_number: engineNumber || null,
       chassis_number: chassisNumber || null,
       fuel_type: fuelType || null,
@@ -61,7 +61,7 @@ export async function createVehicle(
 
   if (error) {
     if (error.code === "23505") {
-      return { message: "You already have a vehicle with this registration number." };
+      return { message: "You already have a vehicle with this license plate." };
     }
     return { message: "Something went wrong creating the vehicle. Please try again." };
   }
@@ -96,14 +96,14 @@ export async function updateVehicle(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { nickname, regNumber, engineNumber, chassisNumber, fuelType, mileageUnit, purchaseDate, ...rest } =
+  const { name, licensePlate, engineNumber, chassisNumber, fuelType, mileageUnit, purchaseDate, ...rest } =
     validated.data;
 
   const { error } = await supabase
     .from("vehicles")
     .update({
-      nickname: nickname || null,
-      reg_number: regNumber,
+      name: name || null,
+      license_plate: licensePlate,
       engine_number: engineNumber || null,
       chassis_number: chassisNumber || null,
       fuel_type: fuelType || null,
@@ -116,7 +116,7 @@ export async function updateVehicle(
 
   if (error) {
     if (error.code === "23505") {
-      return { message: "You already have a vehicle with this registration number." };
+      return { message: "You already have a vehicle with this license plate." };
     }
     return { message: "Something went wrong saving the vehicle. Please try again." };
   }

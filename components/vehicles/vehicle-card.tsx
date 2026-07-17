@@ -33,7 +33,7 @@ export function VehicleCard({
           {photoUrl ? (
             <Image
               src={photoUrl}
-              alt={vehicle.nickname ?? vehicle.model}
+              alt={vehicle.name ?? vehicle.model}
               fill
               className="object-cover"
             />
@@ -44,12 +44,9 @@ export function VehicleCard({
         <div className="flex flex-col gap-2 p-4">
           <div>
             <h3 className="truncate font-semibold leading-tight">
-              {vehicle.nickname || `${vehicle.make} ${vehicle.model}`}
+              {vehicle.name || `${vehicle.make} ${vehicle.model}`}
             </h3>
-            <p className="truncate text-sm text-muted-foreground">
-              {vehicle.year ? `${vehicle.year} ` : ""}
-              {vehicle.make} {vehicle.model} &middot; {vehicle.reg_number}
-            </p>
+            <p className="truncate text-sm text-muted-foreground">{vehicle.license_plate}</p>
           </div>
           <div className="flex flex-wrap gap-1.5">
             {fuelLabel && (

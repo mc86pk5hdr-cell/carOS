@@ -1,6 +1,7 @@
 export type FuelType = "petrol" | "diesel" | "hybrid" | "electric" | "other";
 export type MileageUnit = "km" | "mi";
 export type VehicleStatus = "active" | "archived";
+export type TransmissionType = "automatic" | "manual";
 
 export type ReminderItemType =
   | "road_tax"
@@ -50,15 +51,15 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          nickname: string | null;
+          name: string | null;
           make: string;
           model: string;
           year: number | null;
-          reg_number: string;
-          vin: string | null;
+          license_plate: string;
           engine_number: string | null;
           chassis_number: string | null;
           fuel_type: FuelType | null;
+          transmission: TransmissionType | null;
           mileage: number | null;
           mileage_unit: MileageUnit;
           color: string | null;
@@ -71,15 +72,15 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          nickname?: string | null;
+          name?: string | null;
           make: string;
           model: string;
           year?: number | null;
-          reg_number: string;
-          vin?: string | null;
+          license_plate: string;
           engine_number?: string | null;
           chassis_number?: string | null;
           fuel_type?: FuelType | null;
+          transmission?: TransmissionType | null;
           mileage?: number | null;
           mileage_unit?: MileageUnit;
           color?: string | null;
@@ -92,15 +93,15 @@ export interface Database {
         Update: {
           id?: string;
           user_id?: string;
-          nickname?: string | null;
+          name?: string | null;
           make?: string;
           model?: string;
           year?: number | null;
-          reg_number?: string;
-          vin?: string | null;
+          license_plate?: string;
           engine_number?: string | null;
           chassis_number?: string | null;
           fuel_type?: FuelType | null;
+          transmission?: TransmissionType | null;
           mileage?: number | null;
           mileage_unit?: MileageUnit;
           color?: string | null;

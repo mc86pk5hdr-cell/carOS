@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FUEL_TYPE_OPTIONS, MILEAGE_UNIT_OPTIONS } from "@/lib/constants";
+import { FUEL_TYPE_OPTIONS, MILEAGE_UNIT_OPTIONS, TRANSMISSION_OPTIONS } from "@/lib/constants";
 import { detectVehicle } from "@/app/(dashboard)/vehicles/detect-vehicle-action";
 import type { FormState } from "@/lib/validations/auth";
 import type { Vehicle } from "@/types/supabase";
@@ -36,11 +36,20 @@ export function VehicleForm({
   const [detecting, startDetecting] = useTransition();
   const [detectError, setDetectError] = useState<string | undefined>();
 
-  const regNumberRef = useRef<HTMLInputElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const licensePlateRef = useRef<HTMLInputElement>(null);
   const makeRef = useRef<HTMLInputElement>(null);
   const modelRef = useRef<HTMLInputElement>(null);
   const yearRef = useRef<HTMLInputElement>(null);
   const colorRef = useRef<HTMLInputElement>(null);
+
+  function computeName() {
+    if (!nameRef.current) return;
+    const parts = [yearRef.current?.value, makeRef.current?.value, modelRef.current?.value].filter(
+      Boolean
+    );
+    nameRef.current.value = parts.join(" ");
+  }
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -60,8 +69,8 @@ export function VehicleForm({
         return;
       }
       const { data } = result;
-      if (data.regNumber && regNumberRef.current && !regNumberRef.current.value) {
-        regNumberRef.current.value = data.regNumber;
+      if (data.licensePlate && licensePlateRef.current && !licensePlateRef.current.value) {
+        licensePlateRef.current.value = data.licensePlate;
       }
       if (data.make && makeRef.current && !makeRef.current.value) {
         makeRef.current.value = data.make;
@@ -75,6 +84,7 @@ export function VehicleForm({
       if (data.color && colorRef.current && !colorRef.current.value) {
         colorRef.current.value = data.color;
       }
+      computeName();
     });
   }
 
@@ -112,32 +122,56 @@ export function VehicleForm({
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="nickname">Nickname</Label>
-          <Input id="nickname" name="nickname" defaultValue={vehicle?.nickname ?? ""} />
+          <Label htmlFor="name">Name</Label>
+          <Input
+            ref={nameRef}
+            id="name"
+            name="name"
+            readOnly
+            className="bg-muted text-muted-foreground"
+            defaultValue={
+              vehicle?.name ??
+              [vehicle?.year, vehicle?.make, vehicle?.model].filter(Boolean).join(" ")
+            }
+          />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="regNumber">Registration number</Label>
+          <Label htmlFor="licensePlate">License Plate</Label>
           <Input
-            ref={regNumberRef}
-            id="regNumber"
-            name="regNumber"
-            defaultValue={vehicle?.reg_number ?? ""}
+            ref={licensePlateRef}
+            id="licensePlate"
+            name="licensePlate"
+            defaultValue={vehicle?.license_plate ?? ""}
             required
           />
-          {state?.errors?.regNumber && (
-            <p className="text-sm text-destructive">{state.errors.regNumber[0]}</p>
+          {state?.errors?.licensePlate && (
+            <p className="text-sm text-destructive">{state.errors.licensePlate[0]}</p>
           )}
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="make">Make</Label>
-          <Input ref={makeRef} id="make" name="make" defaultValue={vehicle?.make ?? ""} required />
+          <Input
+            ref={makeRef}
+            id="make"
+            name="make"
+            defaultValue={vehicle?.make ?? ""}
+            onChange={computeName}
+            required
+          />
           {state?.errors?.make && (
             <p className="text-sm text-destructive">{state.errors.make[0]}</p>
           )}
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="model">Model</Label>
-          <Input ref={modelRef} id="model" name="model" defaultValue={vehicle?.model ?? ""} required />
+          <Input
+            ref={modelRef}
+            id="model"
+            name="model"
+            defaultValue={vehicle?.model ?? ""}
+            onChange={computeName}
+            required
+          />
           {state?.errors?.model && (
             <p className="text-sm text-destructive">{state.errors.model[0]}</p>
           )}
@@ -150,6 +184,7 @@ export function VehicleForm({
             name="year"
             type="number"
             defaultValue={vehicle?.year ?? ""}
+            onChange={computeName}
           />
           {state?.errors?.year && (
             <p className="text-sm text-destructive">{state.errors.year[0]}</p>
@@ -167,6 +202,21 @@ export function VehicleForm({
             </SelectTrigger>
             <SelectContent>
               {FUEL_TYPE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="transmission">Transmission</Label>
+          <Select name="transmission" defaultValue={vehicle?.transmission ?? undefined}>
+            <SelectTrigger id="transmission" className="w-full">
+              <SelectValue placeholder="Select transmission" />
+            </SelectTrigger>
+            <SelectContent>
+              {TRANSMISSION_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}
                 </SelectItem>
@@ -208,10 +258,6 @@ export function VehicleForm({
             type="date"
             defaultValue={vehicle?.purchase_date ?? ""}
           />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="vin">VIN</Label>
-          <Input id="vin" name="vin" defaultValue={vehicle?.vin ?? ""} />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="engineNumber">Engine number</Label>
