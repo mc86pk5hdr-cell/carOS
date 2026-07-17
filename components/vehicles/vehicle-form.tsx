@@ -16,6 +16,7 @@ import {
 import { FUEL_TYPE_OPTIONS, MILEAGE_UNIT_OPTIONS } from "@/lib/constants";
 import type { FormState } from "@/lib/validations/auth";
 import type { Vehicle } from "@/types/supabase";
+import type { VehicleDetection } from "@/lib/ai/vehicle-detection";
 
 type VehicleFormAction = (state: FormState, formData: FormData) => Promise<FormState>;
 
@@ -23,15 +24,29 @@ export function VehicleForm({
   action,
   vehicle,
   photoUrl,
+  detection,
+  initialPhoto,
   submitLabel,
 }: {
   action: VehicleFormAction;
   vehicle?: Vehicle;
   photoUrl?: string | null;
+  detection?: VehicleDetection | null;
+  initialPhoto?: File | null;
   submitLabel: string;
 }) {
-  const [state, formAction, pending] = useActionState(action, undefined);
-  const [preview, setPreview] = useState<string | null>(photoUrl ?? null);
+  async function boundAction(state: FormState, formData: FormData): Promise<FormState> {
+    const existingPhoto = formData.get("photo");
+    if ((!existingPhoto || (existingPhoto instanceof File && existingPhoto.size === 0)) && initialPhoto) {
+      formData.set("photo", initialPhoto);
+    }
+    return action(state, formData);
+  }
+
+  const [state, formAction, pending] = useActionState(boundAction, undefined);
+  const [preview, setPreview] = useState<string | null>(
+    photoUrl ?? (initialPhoto ? URL.createObjectURL(initialPhoto) : null)
+  );
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -71,7 +86,7 @@ export function VehicleForm({
           <Input
             id="regNumber"
             name="regNumber"
-            defaultValue={vehicle?.reg_number ?? ""}
+            defaultValue={vehicle?.reg_number ?? detection?.regNumber ?? ""}
             required
           />
           {state?.errors?.regNumber && (
@@ -80,14 +95,14 @@ export function VehicleForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="make">Make</Label>
-          <Input id="make" name="make" defaultValue={vehicle?.make ?? ""} required />
+          <Input id="make" name="make" defaultValue={vehicle?.make ?? detection?.make ?? ""} required />
           {state?.errors?.make && (
             <p className="text-sm text-destructive">{state.errors.make[0]}</p>
           )}
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="model">Model</Label>
-          <Input id="model" name="model" defaultValue={vehicle?.model ?? ""} required />
+          <Input id="model" name="model" defaultValue={vehicle?.model ?? detection?.model ?? ""} required />
           {state?.errors?.model && (
             <p className="text-sm text-destructive">{state.errors.model[0]}</p>
           )}
@@ -98,7 +113,7 @@ export function VehicleForm({
             id="year"
             name="year"
             type="number"
-            defaultValue={vehicle?.year ?? ""}
+            defaultValue={vehicle?.year ?? detection?.year ?? ""}
           />
           {state?.errors?.year && (
             <p className="text-sm text-destructive">{state.errors.year[0]}</p>
@@ -106,7 +121,7 @@ export function VehicleForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="color">Colour</Label>
-          <Input id="color" name="color" defaultValue={vehicle?.color ?? ""} />
+          <Input id="color" name="color" defaultValue={vehicle?.color ?? detection?.color ?? ""} />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="fuelType">Fuel type</Label>

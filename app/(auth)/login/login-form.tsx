@@ -6,6 +6,8 @@ import { login } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { GoogleSignInButton } from "@/components/auth/google-signin-button";
 import {
   Card,
   CardContent,
@@ -24,6 +26,12 @@ export function LoginForm({ next }: { next?: string }) {
         <CardDescription>Sign in to manage your vehicles.</CardDescription>
       </CardHeader>
       <CardContent>
+        <GoogleSignInButton />
+        <div className="my-4 flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs text-muted-foreground">or</span>
+          <Separator className="flex-1" />
+        </div>
         <form action={action} className="flex flex-col gap-4">
           {next && <input type="hidden" name="next" value={next} />}
           <div className="flex flex-col gap-2">

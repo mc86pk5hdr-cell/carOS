@@ -28,7 +28,8 @@ export async function scanReceipt(formData: FormData): Promise<ScanReceiptResult
     }
 
     return { success: true, data };
-  } catch {
+  } catch (error) {
+    console.error("scanReceipt failed:", error);
     return { success: false, message: "Something went wrong scanning the receipt. Please try again." };
   }
 }
