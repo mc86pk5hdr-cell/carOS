@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import Image from "next/image";
-import { Camera } from "lucide-react";
+import { Camera, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,9 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FUEL_TYPE_OPTIONS, MILEAGE_UNIT_OPTIONS } from "@/lib/constants";
+import { detectVehicle } from "@/app/(dashboard)/vehicles/detect-vehicle-action";
 import type { FormState } from "@/lib/validations/auth";
 import type { Vehicle } from "@/types/supabase";
-import type { VehicleDetection } from "@/lib/ai/vehicle-detection";
 
 type VehicleFormAction = (state: FormState, formData: FormData) => Promise<FormState>;
 
@@ -24,33 +24,58 @@ export function VehicleForm({
   action,
   vehicle,
   photoUrl,
-  detection,
-  initialPhoto,
   submitLabel,
 }: {
   action: VehicleFormAction;
   vehicle?: Vehicle;
   photoUrl?: string | null;
-  detection?: VehicleDetection | null;
-  initialPhoto?: File | null;
   submitLabel: string;
 }) {
-  async function boundAction(state: FormState, formData: FormData): Promise<FormState> {
-    const existingPhoto = formData.get("photo");
-    if ((!existingPhoto || (existingPhoto instanceof File && existingPhoto.size === 0)) && initialPhoto) {
-      formData.set("photo", initialPhoto);
-    }
-    return action(state, formData);
-  }
+  const [state, formAction, pending] = useActionState(action, undefined);
+  const [preview, setPreview] = useState<string | null>(photoUrl ?? null);
+  const [detecting, startDetecting] = useTransition();
+  const [detectError, setDetectError] = useState<string | undefined>();
 
-  const [state, formAction, pending] = useActionState(boundAction, undefined);
-  const [preview, setPreview] = useState<string | null>(
-    photoUrl ?? (initialPhoto ? URL.createObjectURL(initialPhoto) : null)
-  );
+  const regNumberRef = useRef<HTMLInputElement>(null);
+  const makeRef = useRef<HTMLInputElement>(null);
+  const modelRef = useRef<HTMLInputElement>(null);
+  const yearRef = useRef<HTMLInputElement>(null);
+  const colorRef = useRef<HTMLInputElement>(null);
 
   function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) setPreview(URL.createObjectURL(file));
+    if (!file) return;
+    setPreview(URL.createObjectURL(file));
+
+    // Only auto-detect when adding a new vehicle — editing shouldn't overwrite fields.
+    if (vehicle) return;
+
+    setDetectError(undefined);
+    const formData = new FormData();
+    formData.append("photo", file);
+    startDetecting(async () => {
+      const result = await detectVehicle(formData);
+      if (!result.success) {
+        setDetectError(result.message);
+        return;
+      }
+      const { data } = result;
+      if (data.regNumber && regNumberRef.current && !regNumberRef.current.value) {
+        regNumberRef.current.value = data.regNumber;
+      }
+      if (data.make && makeRef.current && !makeRef.current.value) {
+        makeRef.current.value = data.make;
+      }
+      if (data.model && modelRef.current && !modelRef.current.value) {
+        modelRef.current.value = data.model;
+      }
+      if (data.year && yearRef.current && !yearRef.current.value) {
+        yearRef.current.value = String(data.year);
+      }
+      if (data.color && colorRef.current && !colorRef.current.value) {
+        colorRef.current.value = data.color;
+      }
+    });
   }
 
   return (
@@ -73,6 +98,15 @@ export function VehicleForm({
             onChange={handlePhotoChange}
             className="max-w-64"
           />
+          {!vehicle && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Sparkles className="size-3.5" />
+              {detecting
+                ? "Detecting make, model, and more…"
+                : "We'll try to auto-fill the details below from this photo."}
+            </p>
+          )}
+          {detectError && <p className="text-sm text-destructive">{detectError}</p>}
         </div>
       </div>
 
@@ -84,9 +118,10 @@ export function VehicleForm({
         <div className="flex flex-col gap-2">
           <Label htmlFor="regNumber">Registration number</Label>
           <Input
+            ref={regNumberRef}
             id="regNumber"
             name="regNumber"
-            defaultValue={vehicle?.reg_number ?? detection?.regNumber ?? ""}
+            defaultValue={vehicle?.reg_number ?? ""}
             required
           />
           {state?.errors?.regNumber && (
@@ -95,14 +130,14 @@ export function VehicleForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="make">Make</Label>
-          <Input id="make" name="make" defaultValue={vehicle?.make ?? detection?.make ?? ""} required />
+          <Input ref={makeRef} id="make" name="make" defaultValue={vehicle?.make ?? ""} required />
           {state?.errors?.make && (
             <p className="text-sm text-destructive">{state.errors.make[0]}</p>
           )}
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="model">Model</Label>
-          <Input id="model" name="model" defaultValue={vehicle?.model ?? detection?.model ?? ""} required />
+          <Input ref={modelRef} id="model" name="model" defaultValue={vehicle?.model ?? ""} required />
           {state?.errors?.model && (
             <p className="text-sm text-destructive">{state.errors.model[0]}</p>
           )}
@@ -110,10 +145,11 @@ export function VehicleForm({
         <div className="flex flex-col gap-2">
           <Label htmlFor="year">Year</Label>
           <Input
+            ref={yearRef}
             id="year"
             name="year"
             type="number"
-            defaultValue={vehicle?.year ?? detection?.year ?? ""}
+            defaultValue={vehicle?.year ?? ""}
           />
           {state?.errors?.year && (
             <p className="text-sm text-destructive">{state.errors.year[0]}</p>
@@ -121,7 +157,7 @@ export function VehicleForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="color">Colour</Label>
-          <Input id="color" name="color" defaultValue={vehicle?.color ?? detection?.color ?? ""} />
+          <Input ref={colorRef} id="color" name="color" defaultValue={vehicle?.color ?? ""} />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="fuelType">Fuel type</Label>
