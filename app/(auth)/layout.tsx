@@ -10,7 +10,7 @@ export default function AuthLayout({
     <div className="flex flex-1 flex-col items-center justify-center gap-8 p-6">
       <Link href="/" className="flex items-center gap-2 text-lg font-semibold">
         <Car className="size-5" />
-        VMS
+        carOS
       </Link>
       <div className="w-full max-w-sm">{children}</div>
     </div>

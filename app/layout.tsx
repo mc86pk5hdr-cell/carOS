@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VMS — Vehicle Management System",
+  title: "carOS — Vehicle Management System",
   description: "Manage every vehicle, service, and renewal in one place.",
 };
 

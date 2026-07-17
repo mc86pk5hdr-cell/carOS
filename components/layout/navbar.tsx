@@ -10,7 +10,7 @@ export function Navbar({ email }: { email?: string }) {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
           <Car className="size-5" />
-          VMS
+          carOS
         </Link>
         <div className="flex items-center gap-2">
           {email && (
