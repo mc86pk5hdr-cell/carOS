@@ -19,16 +19,50 @@ const COUNTDOWN_STYLES: Record<ReminderStatus, string> = {
   none: "text-muted-foreground",
 };
 
+// Tyres: routine inspection advised from 5 years, replacement by ~6.
+const TYRE_WARN_MONTHS = 60;
+const TYRE_REPLACE_MONTHS = 72;
+
+function monthsSince(dateString: string, now: Date = new Date()): number {
+  const from = new Date(dateString);
+  let months =
+    (now.getFullYear() - from.getFullYear()) * 12 + (now.getMonth() - from.getMonth());
+  if (now.getDate() < from.getDate()) months -= 1;
+  return Math.max(0, months);
+}
+
+function formatAge(totalMonths: number): string {
+  const years = Math.floor(totalMonths / 12);
+  const months = totalMonths % 12;
+  if (years === 0) return totalMonths <= 1 ? "1 month old" : `${months} months old`;
+  if (months === 0) return `${years} ${years === 1 ? "year" : "years"} old`;
+  return `${years}y ${months}m old`;
+}
+
 export function VehicleCard({
   vehicle,
   photoUrl,
   reminders = [],
+  tyresReplacedOn,
 }: {
   vehicle: Vehicle;
   photoUrl: string | null;
   reminders?: ReminderItem[];
+  tyresReplacedOn?: string | null;
 }) {
   const fuelLabel = FUEL_TYPE_OPTIONS.find((f) => f.value === vehicle.fuel_type)?.label;
+
+  const carAgeYears = vehicle.year ? new Date().getFullYear() - vehicle.year : null;
+
+  const tyreMonths = tyresReplacedOn ? monthsSince(tyresReplacedOn) : null;
+  const tyreStatus: ReminderStatus =
+    tyreMonths == null
+      ? "none"
+      : tyreMonths >= TYRE_REPLACE_MONTHS
+        ? "overdue"
+        : tyreMonths >= TYRE_WARN_MONTHS
+          ? "due_soon"
+          : "good";
 
   // Road tax and insurance get a dedicated countdown; keep them out of the generic badges.
   const expiryRows = (
@@ -79,8 +113,13 @@ export function VehicleCard({
                 {vehicle.mileage.toLocaleString()} {vehicle.mileage_unit}
               </Badge>
             )}
+            {carAgeYears != null && carAgeYears >= 1 && (
+              <Badge variant="secondary" className="text-xs">
+                {carAgeYears} {carAgeYears === 1 ? "year" : "years"} old
+              </Badge>
+            )}
           </div>
-          {expiryRows.length > 0 && (
+          {(expiryRows.length > 0 || tyreMonths != null) && (
             <div className="flex flex-col gap-1 border-t pt-2">
               {expiryRows.map(([label, item]) => {
                 const { status } = getReminderStatus(item.due_date);
@@ -93,6 +132,14 @@ export function VehicleCard({
                   </div>
                 );
               })}
+              {tyreMonths != null && (
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Tyres</span>
+                  <span className={cn("font-medium", COUNTDOWN_STYLES[tyreStatus])}>
+                    {formatAge(tyreMonths)}
+                  </span>
+                </div>
+              )}
             </div>
           )}
           {visibleReminders.length > 0 && (

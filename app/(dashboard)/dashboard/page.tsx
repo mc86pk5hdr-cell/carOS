@@ -16,9 +16,17 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false });
 
   const vehicleIds = (vehicles ?? []).map((v) => v.id);
-  const { data: allReminders } = vehicleIds.length
-    ? await supabase.from("reminder_items").select("*").in("vehicle_id", vehicleIds)
-    : { data: [] as ReminderItem[] };
+  const [{ data: allReminders }, { data: tyreRecords }] = vehicleIds.length
+    ? await Promise.all([
+        supabase.from("reminder_items").select("*").in("vehicle_id", vehicleIds),
+        supabase
+          .from("maintenance_records")
+          .select("vehicle_id, date")
+          .in("vehicle_id", vehicleIds)
+          .eq("category", "tyres")
+          .order("date", { ascending: false }),
+      ])
+    : [{ data: [] as ReminderItem[] }, { data: [] as Array<{ vehicle_id: string; date: string }> }];
 
   const remindersByVehicle = new Map<string, ReminderItem[]>();
   for (const reminder of allReminders ?? []) {
@@ -27,11 +35,20 @@ export default async function DashboardPage() {
     remindersByVehicle.set(reminder.vehicle_id, list);
   }
 
+  // Records are sorted newest-first, so the first one per vehicle is the latest tyre change.
+  const tyreDateByVehicle = new Map<string, string>();
+  for (const record of tyreRecords ?? []) {
+    if (!tyreDateByVehicle.has(record.vehicle_id)) {
+      tyreDateByVehicle.set(record.vehicle_id, record.date);
+    }
+  }
+
   const vehiclesWithExtras = await Promise.all(
     (vehicles ?? []).map(async (vehicle) => ({
       vehicle,
       photoUrl: await getVehiclePhotoUrl(supabase, vehicle.photo_path),
       reminders: sortByUrgency(remindersByVehicle.get(vehicle.id) ?? []),
+      tyresReplacedOn: tyreDateByVehicle.get(vehicle.id) ?? null,
     }))
   );
 
@@ -72,12 +89,13 @@ export default async function DashboardPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {vehiclesWithExtras.map(({ vehicle, photoUrl, reminders }) => (
+          {vehiclesWithExtras.map(({ vehicle, photoUrl, reminders, tyresReplacedOn }) => (
             <VehicleCard
               key={vehicle.id}
               vehicle={vehicle}
               photoUrl={photoUrl}
               reminders={reminders}
+              tyresReplacedOn={tyresReplacedOn}
             />
           ))}
         </div>
