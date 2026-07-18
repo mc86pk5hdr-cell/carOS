@@ -1,6 +1,8 @@
 "use client";
 
-import { useActionState, useMemo } from "react";
+import { useActionState, useMemo, useState } from "react";
+import { X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { REMINDER_ITEM_TYPES } from "@/lib/constants";
+import { CURRENCY_OPTIONS, DEFAULT_CURRENCY, REMINDER_ITEM_TYPES } from "@/lib/constants";
 import type { FormState } from "@/lib/validations/auth";
 import type { MaintenanceRecord } from "@/types/supabase";
 import type { ReceiptExtraction } from "@/lib/ai/receipt-extraction";
@@ -45,6 +47,22 @@ function buildNotesFromPrefill(prefill: ReceiptExtraction): string | undefined {
   if (prefill.fluidsChanged.length) lines.push(`Fluids changed: ${prefill.fluidsChanged.join(", ")}`);
   if (prefill.notes) lines.push(prefill.notes);
   return lines.length ? lines.join("\n") : undefined;
+}
+
+function formatWithCommas(digits: string): string {
+  return digits ? Number(digits).toLocaleString("en-US") : "";
+}
+
+function toCommaValue(value: number | string): string {
+  const digits = String(value).replace(/[^\d]/g, "");
+  return formatWithCommas(digits);
+}
+
+function splitParts(value: string): string[] {
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 export function MaintenanceForm({
@@ -82,7 +100,10 @@ export function MaintenanceForm({
         notes: record.notes ?? "",
         partsReplaced: record.parts_replaced ?? "",
         labourCost: record.labour_cost ?? "",
-        nextRecommendedServiceDate: record.next_recommended_service_date ?? "",
+        nextRecommendedServiceMileage: record.next_recommended_service_mileage ?? "",
+        recommendation: record.recommendation ?? "",
+        attendedBy: record.attended_by ?? "",
+        mechanicName: record.mechanic_name ?? "",
       };
     }
     if (prefill) {
@@ -92,12 +113,15 @@ export function MaintenanceForm({
         invoiceNumber: prefill.invoiceNumber ?? "",
         mileage: prefill.odometer ?? "",
         cost: prefill.totalAmount ?? "",
-        currency: "MYR",
+        currency: DEFAULT_CURRENCY,
         category: "custom",
         notes: buildNotesFromPrefill(prefill) ?? "",
         partsReplaced: prefill.partsReplaced.join(", "),
         labourCost: prefill.labourCharge ?? "",
-        nextRecommendedServiceDate: "",
+        nextRecommendedServiceMileage: "",
+        recommendation: "",
+        attendedBy: "",
+        mechanicName: "",
       };
     }
     return {
@@ -106,14 +130,51 @@ export function MaintenanceForm({
       invoiceNumber: "",
       mileage: "",
       cost: "",
-      currency: "MYR",
+      currency: DEFAULT_CURRENCY,
       category: "custom",
       notes: "",
       partsReplaced: "",
       labourCost: "",
-      nextRecommendedServiceDate: "",
+      nextRecommendedServiceMileage: "",
+      recommendation: "",
+      attendedBy: "",
+      mechanicName: "",
     };
   }, [record, prefill]);
+
+  const [mileage, setMileage] = useState(() => toCommaValue(defaults.mileage));
+  const [nextServiceMileage, setNextServiceMileage] = useState(() =>
+    toCommaValue(defaults.nextRecommendedServiceMileage)
+  );
+  const [parts, setParts] = useState<string[]>(() => splitParts(defaults.partsReplaced));
+  const [partInput, setPartInput] = useState("");
+
+  function handleMileageChange(setter: (value: string) => void) {
+    return (e: React.ChangeEvent<HTMLInputElement>) => {
+      setter(formatWithCommas(e.target.value.replace(/[^\d]/g, "")));
+    };
+  }
+
+  function addPart() {
+    const value = partInput.trim().replace(/,/g, "");
+    if (value && !parts.includes(value)) {
+      setParts((prev) => [...prev, value]);
+    }
+    setPartInput("");
+  }
+
+  function removePart(part: string) {
+    setParts((prev) => prev.filter((p) => p !== part));
+  }
+
+  function handlePartKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      addPart();
+    } else if (e.key === "Backspace" && !partInput && parts.length) {
+      setParts((prev) => prev.slice(0, -1));
+    }
+  }
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
@@ -148,42 +209,126 @@ export function MaintenanceForm({
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="mileage">Mileage</Label>
-          <Input id="mileage" name="mileage" type="number" defaultValue={defaults.mileage} />
+          <Input
+            id="mileage"
+            name="mileage"
+            inputMode="numeric"
+            value={mileage}
+            onChange={handleMileageChange(setMileage)}
+          />
+          {state?.errors?.mileage && (
+            <p className="text-sm text-destructive">{state.errors.mileage[0]}</p>
+          )}
         </div>
         <div className="flex gap-2">
           <div className="flex flex-1 flex-col gap-2">
             <Label htmlFor="cost">Total cost</Label>
-            <Input id="cost" name="cost" type="number" step="0.01" defaultValue={defaults.cost} />
+            <div className="relative">
+              <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
+                $
+              </span>
+              <Input
+                id="cost"
+                name="cost"
+                type="number"
+                step="0.01"
+                min="0"
+                className="pl-7"
+                defaultValue={defaults.cost}
+              />
+            </div>
           </div>
-          <div className="flex w-24 flex-col gap-2">
+          <div className="flex w-28 flex-col gap-2">
             <Label htmlFor="currency">Currency</Label>
-            <Input id="currency" name="currency" defaultValue={defaults.currency} maxLength={10} />
+            <Select name="currency" defaultValue={defaults.currency}>
+              <SelectTrigger id="currency" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCY_OPTIONS.map((code) => (
+                  <SelectItem key={code} value={code}>
+                    {code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="labourCost">Labour cost</Label>
+          <div className="relative">
+            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
+              $
+            </span>
+            <Input
+              id="labourCost"
+              name="labourCost"
+              type="number"
+              step="0.01"
+              min="0"
+              className="pl-7"
+              defaultValue={defaults.labourCost}
+            />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="nextRecommendedServiceMileage">Next recommended service (Mileage)</Label>
           <Input
-            id="labourCost"
-            name="labourCost"
-            type="number"
-            step="0.01"
-            defaultValue={defaults.labourCost}
+            id="nextRecommendedServiceMileage"
+            name="nextRecommendedServiceMileage"
+            inputMode="numeric"
+            value={nextServiceMileage}
+            onChange={handleMileageChange(setNextServiceMileage)}
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="nextRecommendedServiceDate">Next recommended service</Label>
-          <Input
-            id="nextRecommendedServiceDate"
-            name="nextRecommendedServiceDate"
-            type="date"
-            defaultValue={defaults.nextRecommendedServiceDate}
-          />
+          <Label htmlFor="attendedBy">Attended by</Label>
+          <Input id="attendedBy" name="attendedBy" defaultValue={defaults.attendedBy} />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="mechanicName">Mechanic&apos;s name</Label>
+          <Input id="mechanicName" name="mechanicName" defaultValue={defaults.mechanicName} />
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="partsReplaced">Parts replaced</Label>
-        <Input id="partsReplaced" name="partsReplaced" defaultValue={defaults.partsReplaced} />
+        <Label htmlFor="partInput">Parts replaced</Label>
+        <input type="hidden" name="partsReplaced" value={parts.join(", ")} />
+        {parts.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {parts.map((part) => (
+              <Badge key={part} variant="secondary" className="gap-1 pr-1">
+                {part}
+                <button
+                  type="button"
+                  aria-label={`Remove ${part}`}
+                  onClick={() => removePart(part)}
+                  className="rounded-sm p-0.5 hover:bg-muted-foreground/20"
+                >
+                  <X className="size-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+        <Input
+          id="partInput"
+          value={partInput}
+          onChange={(e) => setPartInput(e.target.value)}
+          onKeyDown={handlePartKeyDown}
+          onBlur={addPart}
+          placeholder="Type a part and press Enter"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="recommendation">Recommendation</Label>
+        <Textarea
+          id="recommendation"
+          name="recommendation"
+          rows={3}
+          defaultValue={defaults.recommendation}
+        />
       </div>
 
       <div className="flex flex-col gap-2">

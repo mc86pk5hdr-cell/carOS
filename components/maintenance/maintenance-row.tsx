@@ -32,7 +32,11 @@ export function MaintenanceRow({
       </div>
       {record.cost != null && (
         <span className="shrink-0 text-sm font-medium">
-          {record.currency} {record.cost.toLocaleString()}
+          {record.currency} $
+          {record.cost.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}
         </span>
       )}
     </Link>

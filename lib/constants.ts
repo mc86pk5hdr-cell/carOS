@@ -18,6 +18,23 @@ export const MILEAGE_UNIT_OPTIONS = [
   { value: "mi", label: "mi" },
 ] as const;
 
+export const CURRENCY_OPTIONS = [
+  "BND",
+  "MYR",
+  "SGD",
+  "USD",
+  "EUR",
+  "GBP",
+  "AUD",
+  "JPY",
+  "CNY",
+  "THB",
+  "IDR",
+  "PHP",
+] as const;
+
+export const DEFAULT_CURRENCY = "BND";
+
 export const REMINDER_ITEM_TYPES: Record<
   ReminderItemType,
   { label: string; defaultIntervalDays?: number }

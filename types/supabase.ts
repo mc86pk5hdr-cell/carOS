@@ -179,7 +179,10 @@ export interface Database {
           notes: string | null;
           parts_replaced: string | null;
           labour_cost: number | null;
-          next_recommended_service_date: string | null;
+          next_recommended_service_mileage: number | null;
+          recommendation: string | null;
+          attended_by: string | null;
+          mechanic_name: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -197,7 +200,10 @@ export interface Database {
           notes?: string | null;
           parts_replaced?: string | null;
           labour_cost?: number | null;
-          next_recommended_service_date?: string | null;
+          next_recommended_service_mileage?: number | null;
+          recommendation?: string | null;
+          attended_by?: string | null;
+          mechanic_name?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -215,7 +221,10 @@ export interface Database {
           notes?: string | null;
           parts_replaced?: string | null;
           labour_cost?: number | null;
-          next_recommended_service_date?: string | null;
+          next_recommended_service_mileage?: number | null;
+          recommendation?: string | null;
+          attended_by?: string | null;
+          mechanic_name?: string | null;
           created_at?: string;
           updated_at?: string;
         };

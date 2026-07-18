@@ -35,20 +35,32 @@ export default async function MaintenanceDetailPage({
     }))
   );
 
+  const formatMoney = (amount: number) =>
+    `$${amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
   const details: Array<[string, string]> = (
     [
       ["Invoice number", record.invoice_number],
       ["Mileage", record.mileage != null ? record.mileage.toLocaleString() : null],
-      ["Labour cost", record.labour_cost != null ? `${record.currency} ${record.labour_cost}` : null],
-      ["Parts replaced", record.parts_replaced],
       [
-        "Next recommended service",
-        record.next_recommended_service_date
-          ? new Date(record.next_recommended_service_date).toLocaleDateString()
+        "Labour cost",
+        record.labour_cost != null ? `${record.currency} ${formatMoney(record.labour_cost)}` : null,
+      ],
+      [
+        "Next recommended service (Mileage)",
+        record.next_recommended_service_mileage != null
+          ? record.next_recommended_service_mileage.toLocaleString()
           : null,
       ],
+      ["Attended by", record.attended_by],
+      ["Mechanic's name", record.mechanic_name],
     ] satisfies Array<[string, string | null]>
   ).filter((entry): entry is [string, string] => Boolean(entry[1]));
+
+  const parts = (record.parts_replaced ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,7 +74,7 @@ export default async function MaintenanceDetailPage({
             <Badge variant="secondary">{REMINDER_ITEM_TYPES[record.category].label}</Badge>
             {record.cost != null && (
               <Badge variant="secondary">
-                {record.currency} {record.cost.toLocaleString()}
+                {record.currency} {formatMoney(record.cost)}
               </Badge>
             )}
           </div>
@@ -70,20 +82,45 @@ export default async function MaintenanceDetailPage({
         <MaintenanceActionsMenu vehicleId={vehicleId} recordId={record.id} />
       </div>
 
-      {details.length > 0 && (
+      {(details.length > 0 || parts.length > 0) && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Details</CardTitle>
           </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {details.map(([label, value]) => (
-                <div key={label}>
-                  <dt className="text-sm text-muted-foreground">{label}</dt>
-                  <dd className="text-sm">{value}</dd>
+          <CardContent className="flex flex-col gap-4">
+            {details.length > 0 && (
+              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {details.map(([label, value]) => (
+                  <div key={label}>
+                    <dt className="text-sm text-muted-foreground">{label}</dt>
+                    <dd className="text-sm">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {parts.length > 0 && (
+              <div>
+                <p className="mb-1.5 text-sm text-muted-foreground">Parts replaced</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {parts.map((part) => (
+                    <Badge key={part} variant="secondary">
+                      {part}
+                    </Badge>
+                  ))}
                 </div>
-              ))}
-            </dl>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {record.recommendation && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Recommendation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="whitespace-pre-line text-sm">{record.recommendation}</p>
           </CardContent>
         </Card>
       )}
