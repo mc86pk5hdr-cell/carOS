@@ -22,7 +22,39 @@ function parseVehicleForm(formData: FormData) {
     mileageUnit: formData.get("mileageUnit") || "km",
     color: formData.get("color") || undefined,
     purchaseDate: formData.get("purchaseDate") || undefined,
+    roadTaxExpiry: formData.get("roadTaxExpiry") || undefined,
+    insuranceExpiry: formData.get("insuranceExpiry") || undefined,
   });
+}
+
+// Road tax / insurance expiry dates live on the vehicle's reminder_items —
+// the same entries the reminders UI manages — so there's one source of truth.
+async function syncExpiryReminder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  vehicleId: string,
+  itemType: "road_tax" | "insurance",
+  dueDate: string | undefined
+) {
+  const { data: existing } = await supabase
+    .from("reminder_items")
+    .select("id")
+    .eq("vehicle_id", vehicleId)
+    .eq("item_type", itemType)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    await supabase.from("reminder_items").update({ due_date: dueDate || null }).eq("id", existing.id);
+  } else if (dueDate) {
+    await supabase.from("reminder_items").insert({
+      vehicle_id: vehicleId,
+      user_id: userId,
+      item_type: itemType,
+      due_date: dueDate,
+    });
+  }
 }
 
 export async function createVehicle(
@@ -40,8 +72,18 @@ export async function createVehicle(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { name, licensePlate, engineNumber, chassisNumber, fuelType, mileageUnit, purchaseDate, ...rest } =
-    validated.data;
+  const {
+    name,
+    licensePlate,
+    engineNumber,
+    chassisNumber,
+    fuelType,
+    mileageUnit,
+    purchaseDate,
+    roadTaxExpiry,
+    insuranceExpiry,
+    ...rest
+  } = validated.data;
 
   const { data: vehicle, error } = await supabase
     .from("vehicles")
@@ -76,6 +118,9 @@ export async function createVehicle(
     }
   }
 
+  await syncExpiryReminder(supabase, user.id, vehicle.id, "road_tax", roadTaxExpiry);
+  await syncExpiryReminder(supabase, user.id, vehicle.id, "insurance", insuranceExpiry);
+
   revalidatePath("/dashboard");
   redirect(`/vehicles/${vehicle.id}`);
 }
@@ -96,8 +141,18 @@ export async function updateVehicle(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { name, licensePlate, engineNumber, chassisNumber, fuelType, mileageUnit, purchaseDate, ...rest } =
-    validated.data;
+  const {
+    name,
+    licensePlate,
+    engineNumber,
+    chassisNumber,
+    fuelType,
+    mileageUnit,
+    purchaseDate,
+    roadTaxExpiry,
+    insuranceExpiry,
+    ...rest
+  } = validated.data;
 
   const { error } = await supabase
     .from("vehicles")
@@ -130,6 +185,9 @@ export async function updateVehicle(
       // Photo upload failure shouldn't block the rest of the update.
     }
   }
+
+  await syncExpiryReminder(supabase, user.id, vehicleId, "road_tax", roadTaxExpiry);
+  await syncExpiryReminder(supabase, user.id, vehicleId, "insurance", insuranceExpiry);
 
   revalidatePath("/dashboard");
   revalidatePath(`/vehicles/${vehicleId}`);

@@ -44,6 +44,23 @@ export function getReminderProgress(
   return Math.min(100, Math.max(0, pct));
 }
 
+// Month resolution when far out, day resolution when close (under ~2 months).
+export function formatExpiryCountdown(
+  dueDate: string | null,
+  today: Date = new Date()
+): string | null {
+  const { status, daysRemaining } = getReminderStatus(dueDate, today);
+  if (daysRemaining == null) return null;
+
+  const months = Math.floor(Math.abs(daysRemaining) / 30);
+  if (status === "overdue") {
+    return months >= 2 ? `Expired ${months} months ago` : `Expired ${Math.abs(daysRemaining)}d ago`;
+  }
+  if (daysRemaining === 0) return "Expires today";
+  if (months >= 2) return `${months} months left`;
+  return `${daysRemaining}d left`;
+}
+
 export function sortByUrgency(items: ReminderItem[], today: Date = new Date()): ReminderItem[] {
   const rank: Record<ReminderStatus, number> = { overdue: 0, due_soon: 1, good: 2, none: 3 };
   return [...items].sort((a, b) => {

@@ -19,6 +19,17 @@ export default async function EditVehiclePage({
   const photoUrl = await getVehiclePhotoUrl(supabase, vehicle.photo_path);
   const action = updateVehicle.bind(null, vehicle.id);
 
+  const { data: expiryReminders } = await supabase
+    .from("reminder_items")
+    .select("*")
+    .eq("vehicle_id", vehicle.id)
+    .in("item_type", ["road_tax", "insurance"])
+    .order("created_at", { ascending: true });
+  const expiries = {
+    roadTax: expiryReminders?.find((r) => r.item_type === "road_tax")?.due_date,
+    insurance: expiryReminders?.find((r) => r.item_type === "insurance")?.due_date,
+  };
+
   return (
     <div className="mx-auto max-w-2xl">
       <Card>
@@ -30,6 +41,7 @@ export default async function EditVehiclePage({
             action={action}
             vehicle={vehicle}
             photoUrl={photoUrl}
+            expiries={expiries}
             submitLabel="Save changes"
           />
         </CardContent>

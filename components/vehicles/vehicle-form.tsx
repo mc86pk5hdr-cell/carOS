@@ -24,11 +24,13 @@ export function VehicleForm({
   action,
   vehicle,
   photoUrl,
+  expiries,
   submitLabel,
 }: {
   action: VehicleFormAction;
   vehicle?: Vehicle;
   photoUrl?: string | null;
+  expiries?: { roadTax?: string | null; insurance?: string | null };
   submitLabel: string;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -257,6 +259,24 @@ export function VehicleForm({
             name="purchaseDate"
             type="date"
             defaultValue={vehicle?.purchase_date ?? ""}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="roadTaxExpiry">Road tax expiry</Label>
+          <Input
+            id="roadTaxExpiry"
+            name="roadTaxExpiry"
+            type="date"
+            defaultValue={expiries?.roadTax ?? ""}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="insuranceExpiry">Insurance expiry</Label>
+          <Input
+            id="insuranceExpiry"
+            name="insuranceExpiry"
+            type="date"
+            defaultValue={expiries?.insurance ?? ""}
           />
         </div>
         <div className="flex flex-col gap-2">

@@ -19,4 +19,6 @@ export const VehicleSchema = z.object({
   mileageUnit: z.enum(["km", "mi"]),
   color: z.string().trim().max(30).optional(),
   purchaseDate: z.string().trim().optional(),
+  roadTaxExpiry: z.string().trim().optional(),
+  insuranceExpiry: z.string().trim().optional(),
 });
