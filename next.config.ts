@@ -1,8 +1,17 @@
 import type { NextConfig } from "next";
 
-const supabaseHostname = process.env.NEXT_PUBLIC_SUPABASE_URL
-  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname
-  : undefined;
+function parseSupabaseHostname(): string | undefined {
+  try {
+    const raw = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+    return raw ? new URL(raw).hostname : undefined;
+  } catch {
+    // A malformed URL shouldn't break the whole build — it only disables
+    // next/image loading of Supabase Storage photos.
+    return undefined;
+  }
+}
+
+const supabaseHostname = parseSupabaseHostname();
 
 const nextConfig: NextConfig = {
   images: {
